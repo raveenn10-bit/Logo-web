@@ -17,16 +17,7 @@ The migration files in `supabase/migrations` version the payment flow, receipt p
 
 ## Admin enrollment
 
-The `app_admins` table is intentionally empty until an account owner verifies email ownership. After the owner signs up and confirms `charshan59@gmail.com`, an operator with Supabase project access can run:
-
-```sql
-insert into public.app_admins(user_id)
-select id from auth.users
-where lower(email)='charshan59@gmail.com' and email_confirmed_at is not null
-on conflict do nothing;
-```
-
-No public admin credentials are hardcoded. The customer facing UI never assigns admin status. Check the actual bank transaction before clicking Approve.
+The private admin URL is `/chamilka`. The `app_admins` table remains empty until the owner signs up with `charshan59@gmail.com` and confirms that mailbox. The verified-email database trigger then grants admin access automatically; changing away from that email revokes it. No public admin credentials are hardcoded. Check the actual bank transaction before clicking Approve.
 
 ## Deployment
 
