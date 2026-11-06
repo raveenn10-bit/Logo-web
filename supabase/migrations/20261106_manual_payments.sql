@@ -102,3 +102,14 @@ revoke all on public.payment_requests from anon,authenticated;
 grant select on public.payment_requests to authenticated;
 revoke all on public.app_admins from anon,authenticated;
 grant select on public.app_admins to authenticated;
+
+revoke execute on function public.consume_generation_credit(uuid) from public,anon,authenticated;
+revoke execute on function public.handle_new_user() from public,anon,authenticated;
+revoke execute on function public.create_logo_payment_request() from public,anon;
+revoke execute on function public.submit_payment_receipt(uuid,text) from public,anon;
+revoke execute on function public.review_logo_payment(uuid,boolean,text) from public,anon;
+revoke execute on function public.list_logo_payments_admin() from public,anon;
+grant execute on function public.create_logo_payment_request() to authenticated;
+grant execute on function public.submit_payment_receipt(uuid,text) to authenticated;
+grant execute on function public.review_logo_payment(uuid,boolean,text) to authenticated;
+grant execute on function public.list_logo_payments_admin() to authenticated;
