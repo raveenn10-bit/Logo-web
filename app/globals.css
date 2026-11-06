@@ -3,3 +3,23 @@
 .pay-cta{display:inline-block;background:#ff7a00;color:#111827;text-decoration:none;border-radius:10px;padding:14px 18px;font-weight:800}.studio-fields{display:grid;grid-template-columns:1fr 1fr;gap:16px}.studio-style{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:20px 0}.studio-style button{background:#f4f1ec;border:1px solid #dce2ea;color:#17243b;text-align:left;font-weight:700}.studio-style button.active{border-color:#ff7a00;background:#fff0dd}.studio-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:15px}.studio-grid article{border:1px solid #e3e7ec;border-radius:14px;padding:12px}.studio-preview{display:block;width:100%;height:auto;aspect-ratio:8/5;object-fit:contain;border-radius:10px;background:#f8f6f0}.pay-modal-backdrop{position:fixed;inset:0;background:#101827b8;z-index:50;display:grid;place-items:center;padding:18px}.pay-modal{background:#fff;max-width:500px;width:100%;padding:35px;border-radius:20px;position:relative;box-shadow:0 30px 80px #0004}.pay-modal h2{font:800 30px/1.15 Montserrat}.pay-modal p{color:#667085;line-height:1.6}.pay-modal strong{display:block;font-size:18px;margin:20px 0}.pay-modal .pay-cta{margin-right:10px}.pay-modal-close{position:absolute;right:12px;top:10px;background:transparent;font-size:25px}.pay-modal small{color:#c45a00;letter-spacing:2px;font-weight:800}@media(max-width:650px){.studio-fields{grid-template-columns:1fr}.studio-style{grid-template-columns:repeat(2,1fr)}.studio-grid{grid-template-columns:1fr}.pay-modal{padding:25px}}
 
 .pay-filters{display:flex;gap:10px;margin:20px 0}.pay-filters input,.pay-filters select{padding:12px;border:1px solid #d1d7df;border-radius:10px;background:#fff;min-width:0}.pay-filters input{flex:1}@media(max-width:650px){.pay-filters{flex-direction:column}}
+
+/* Editorial identity examples. Each card is a complete fictional brand study. */
+.style-section{padding-top:84px}
+.style-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:19px}
+.style-card{display:block;padding:0;border-radius:18px;overflow:hidden;min-width:0;text-align:left;box-shadow:0 13px 32px #19263b0d;transition:transform .2s,box-shadow .2s,border-color .2s}
+.style-card:hover{transform:translateY(-4px);box-shadow:0 20px 38px #19263b1c}
+.style-card.active{border:2px solid #ef7e25}
+.style-art{position:relative;width:100%;aspect-ratio:680/460;background:#e7e5dd;overflow:hidden}
+.style-art img{object-fit:cover;transition:transform .35s}
+.style-card:hover .style-art img{transform:scale(1.035)}
+.style-copy{padding:22px 22px 25px}
+.style-copy small{display:block;font:700 10px 'DM Mono',monospace;color:#a56533;letter-spacing:1.6px;margin-bottom:12px}
+.style-copy b{display:block;font:800 19px/1.22 Montserrat,sans-serif;letter-spacing:-.6px}
+.style-copy p{min-height:48px;font-size:13px;line-height:1.55;color:#687382;margin:10px 0 22px}
+.style-copy i{font-size:12px;font-style:normal;color:#ad551c;font-weight:800}
+.style-continue{display:flex;align-items:center;justify-content:center;gap:25px;margin-top:35px}
+.style-continue p{color:#667085;font-size:14px}
+.style-continue strong{color:#19263b}
+@media(max-width:900px){.style-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:650px){.style-section{padding:55px 18px}.style-grid{grid-template-columns:1fr;gap:18px}.style-copy{padding:18px 20px 22px}.style-copy p{min-height:0}.style-continue{align-items:stretch;flex-direction:column;gap:8px}.style-continue button{width:100%}}
