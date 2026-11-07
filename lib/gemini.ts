@@ -25,7 +25,7 @@ export class ProviderError extends Error {
 export async function generateConcept(brief: Brief): Promise<{spec:LogoSpec;model:string;tokens:number}> {
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw new ProviderError("AI generation is not configured yet. No credit was used.",503);
-  const model = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
+  const model = process.env.GEMINI_MODEL || "gemini-3.8-flash";
   if (!/^gemini-[a-zA-Z0-9.-]+$/.test(model)) throw new ProviderError("AI model configuration is invalid.",503);
   const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/"+model+":generateContent",{
     method:"POST",headers:{"Content-Type":"application/json","x-goog-api-key":key},
