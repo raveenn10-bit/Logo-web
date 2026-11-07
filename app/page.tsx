@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import VantaNetBackground from "../components/VantaNetBackground";
 
 const siteUrl = "https://logo.harshapex.com.lk";
 const concepts = [
@@ -100,6 +101,7 @@ export default function Home() {
       </header>
 
       <section className="hero">
+        <VantaNetBackground />
         <div className="copy">
           <p className="eyebrow">BUILT BY HARSH APEX DIGITAL SOLUTIONS</p>
           <h1>Professional logo design<br/>that <em>fits your brand.</em></h1>
