@@ -1,127 +1,26 @@
 "use client";
-
-import { useEffect, useState } from "react";
-import { createClient, type User } from "@supabase/supabase-js";
-
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || "";
-const db = url && key ? createClient(url, key) : null;
-
-type Payment = {
-  id: string;
-  order_id: string;
-  user_id: string;
-  email: string;
-  amount_lkr: number;
-  status: string;
-  receipt_path: string | null;
-  created_at: string;
-};
-
-export default function AdminPage() {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [authorized, setAuthorized] = useState(false);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [orders, setOrders] = useState<Payment[]>([]);
-  const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState("all");
-  const [reason, setReason] = useState<Record<string, string>>({});
-  const [verified, setVerified] = useState<Record<string, boolean>>({});
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
-
-  async function load(account: User) {
-    if (!db) return;
-    setLoading(true);
-    const role = await db.rpc("is_logo_admin");
-    if (role.error || role.data !== true) {
-      setAuthorized(false);
-      setOrders([]);
-      setLoading(false);
-      return;
-    }
-    setAuthorized(true);
-    const result = await db.rpc("list_logo_payments_admin");
-    if (result.error) setError(result.error.message);
-    else setOrders((result.data || []) as Payment[]);
-    setLoading(false);
-  }
-
-  useEffect(() => {
-    if (!db) { setLoading(false); return; }
-    db.auth.getUser().then(({ data }) => {
-      setUser(data.user);
-      if (data.user) void load(data.user);
-      else setLoading(false);
-    });
-    const { data: { subscription } } = db.auth.onAuthStateChange((_event, session) => {
-      const account = session?.user || null;
-      setUser(account);
-      if (account) void load(account);
-      else { setAuthorized(false); setOrders([]); setLoading(false); }
-    });
-    return () => subscription.unsubscribe();
-  }, []);
-
-  async function signIn(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!db) return;
-    setBusy(true); setError("");
-    const result = await db.auth.signInWithPassword({ email, password });
-    if (result.error) setError(result.error.message);
-    setBusy(false);
-  }
-
-  async function viewReceipt(payment: Payment) {
-    if (!db || !payment.receipt_path) return;
-    setError("");
-    const result = await db.storage.from("payment-receipts").createSignedUrl(payment.receipt_path, 60);
-    if (result.error) setError(result.error.message);
-    else if (result.data) window.open(result.data.signedUrl, "_blank", "noopener,noreferrer");
-  }
-
-  async function review(payment: Payment, approve: boolean) {
-    if (!db || !user) return;
-    if (approve && !verified[payment.id]) { setError("Confirm the actual bank transaction first."); return; }
-    if (!approve && (reason[payment.id] || "").trim().length < 5) { setError("Enter a rejection reason (at least 5 characters)."); return; }
-    setBusy(true); setError(""); setNotice("");
-    const result = await db.rpc("review_logo_payment", {
-      p_payment: payment.id,
-      p_approve: approve,
-      p_reason: approve ? null : reason[payment.id].trim(),
-    });
-    if (result.error) setError(result.error.message);
-    else { setNotice(result.data ? "Review saved. Account credits updated." : "This order was already reviewed."); await load(user); }
-    setBusy(false);
-  }
-
-  const visible = orders.filter(p =>
-    (filter === "all" || p.status === filter) &&
-    (p.order_id.toLowerCase().includes(search.toLowerCase()) || p.email.toLowerCase().includes(search.toLowerCase()))
-  );
-  const count = (status: string) => orders.filter(p => p.status === status).length;
-  const revenue = orders.filter(p => p.status === "approved").reduce((sum, p) => sum + p.amount_lkr, 0);
-
-  return <main className="pay-shell admin-shell">
-    <div className="admin-top"><a href="/" className="pay-back">← LOGOVA</a><span>ADMIN WORKSPACE / CHAMILKA</span></div>
-    <div className="pay-hero"><span>PRIVATE PAYMENT OPERATIONS</span><h1>Payment review</h1><p>Verify each transfer with your bank before issuing a logo credit.</p></div>
-    {error && <div className="pay-error" role="alert">{error}</div>}
-    {notice && <div className="pay-note" role="status">{notice}</div>}
-    {!db ? <section className="pay-panel"><p>Supabase configuration is unavailable.</p></section> :
-      loading ? <section className="pay-panel"><p role="status">Checking administrator access…</p></section> :
-      !user ? <section className="pay-panel admin-login"><h2>Admin sign in</h2><p>Only approved administrators can review customer payments.</p><form onSubmit={signIn}><label>Email<input required type="email" autoComplete="username" value={email} onChange={e => setEmail(e.target.value)}/></label><label>Password<input required type="password" autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)}/></label><button disabled={busy} type="submit">{busy ? "Signing in…" : "Sign in"}</button></form></section> :
-      !authorized ? <section className="pay-panel"><h2>Access denied</h2><p>This account does not have permission to manage payments.</p><button className="pay-outline" onClick={() => db.auth.signOut()}>Sign out</button></section> :
-      <>
-        <div className="pay-stats admin-stats"><article><small>PENDING RECEIPTS</small><b>{count("receipt_submitted")}</b></article><article><small>APPROVED ORDERS</small><b>{count("approved")}</b></article><article><small>VERIFIED REVENUE*</small><b>Rs. {revenue.toLocaleString()}</b></article></div>
-        <p className="admin-footnote">* Totals reflect the 100 most recent orders shown below.</p>
-        <section className="pay-panel"><div className="admin-heading"><div><h2>Payment requests</h2><p>Search, inspect a receipt, then approve or reject.</p></div><button className="pay-outline" disabled={busy} onClick={() => load(user)}>Refresh</button></div>
-          <div className="pay-filters"><input aria-label="Search by order ID or email" placeholder="Order ID or customer email" value={search} onChange={e => setSearch(e.target.value)}/><select aria-label="Filter payment status" value={filter} onChange={e => setFilter(e.target.value)}><option value="all">All statuses</option><option value="receipt_submitted">Pending verification</option><option value="pending">Awaiting receipt</option><option value="approved">Approved</option><option value="rejected">Rejected</option></select></div>
-          {orders.length === 0 ? <p>No payment requests yet.</p> : visible.length === 0 ? <p>No matching orders.</p> :
-            <div className="admin-orders">{visible.map(p => <article key={p.id} className="admin-order"><div className="admin-order-main"><div><strong>{p.order_id}</strong><span className={"pay-status " + p.status}>{p.status.replaceAll("_", " ")}</span><p>{p.email}</p><small>{new Date(p.created_at).toLocaleString()} · LKR {p.amount_lkr}</small></div>{p.receipt_path && <button className="pay-outline" onClick={() => viewReceipt(p)}>View receipt ↗</button>}</div>{p.status === "receipt_submitted" && <div className="admin-review"><label><input type="checkbox" checked={!!verified[p.id]} onChange={e => setVerified({ ...verified, [p.id]: e.target.checked })}/> I verified this bank transaction</label><div className="admin-review-actions"><button disabled={busy || !verified[p.id]} onClick={() => review(p, true)}>Approve · +1 credit</button><input aria-label={"Rejection reason for " + p.order_id} placeholder="Reason for rejection" value={reason[p.id] || ""} onChange={e => setReason({ ...reason, [p.id]: e.target.value })}/><button disabled={busy} className="pay-outline" onClick={() => review(p, false)}>Reject</button></div></div>}</article>)}</div>}
-        </section><button className="pay-outline" onClick={() => db.auth.signOut()}>Sign out</button>
-      </>}
-  </main>;
+import {useEffect,useMemo,useState} from "react";
+import {createClient,type User} from "@supabase/supabase-js";
+const url=process.env.NEXT_PUBLIC_SUPABASE_URL||"",key=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||"";
+const db=url&&key?createClient(url,key):null;
+type Payment={id:string;order_id:string;email:string;amount_lkr:number;status:string;receipt_path:string|null;created_at:string};
+type Overview={users:number;projects:number;logos:number;free_generations:number;paid_generations:number;revenue_lkr:number;pending_payments:number;failed_jobs:number;ai_tokens:number;clients:number};
+type Activity={created_at:string;category:string;event:string;actor_email:string;detail:string}; type Client={id:string;name:string;email:string|null;owner_email:string;created_at:string;project_count:number};
+export default function AdminPage(){
+ const [user,setUser]=useState<User|null>(null),[email,setEmail]=useState(""),[password,setPassword]=useState(""),[authorized,setAuthorized]=useState(false),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState(""),[notice,setNotice]=useState(""),[tab,setTab]=useState<"overview"|"payments"|"users"|"clients"|"usage"|"audit">("overview"),[orders,setOrders]=useState<Payment[]>([]),[summary,setSummary]=useState<Overview|null>(null),[activity,setActivity]=useState<Activity[]>([]),[clients,setClients]=useState<Client[]>([]),[search,setSearch]=useState(""),[filter,setFilter]=useState("all"),[reason,setReason]=useState<Record<string,string>>({}),[verified,setVerified]=useState<Record<string,boolean>>({});
+ async function load(account:User){if(!db)return;setLoading(true);setError("");const role=await db.rpc("is_logo_admin");if(role.error||role.data!==true){setAuthorized(false);setLoading(false);return}setAuthorized(true);const [payments,overview,events,clientData]=await Promise.all([db.rpc("list_logo_payments_admin"),db.rpc("logo_admin_overview"),db.rpc("logo_admin_activity",{p_limit:100}),db.rpc("logo_admin_clients",{p_limit:100})]);if(payments.error||overview.error||events.error||clientData.error)setError(payments.error?.message||overview.error?.message||events.error?.message||clientData.error?.message||"Could not load operations data.");setOrders(payments.data||[]);setSummary(overview.data||null);setActivity(events.data||[]);setClients(clientData.data||[]);setLoading(false)}
+ useEffect(()=>{if(!db){setLoading(false);return}db.auth.getUser().then(({data})=>{setUser(data.user);if(data.user)void load(data.user);else setLoading(false)});const {data:{subscription}}=db.auth.onAuthStateChange((_event,session)=>{setUser(session?.user||null);if(session?.user)void load(session.user);else{setAuthorized(false);setLoading(false)}});return()=>subscription.unsubscribe()},[]);
+ async function signIn(e:React.FormEvent){e.preventDefault();if(!db)return;setBusy(true);setError("");const r=await db.auth.signInWithPassword({email,password});if(r.error)setError(r.error.message);setBusy(false)}
+ async function viewReceipt(p:Payment){if(!db||!p.receipt_path)return;const r=await db.storage.from("payment-receipts").createSignedUrl(p.receipt_path,60);if(r.error)setError(r.error.message);else window.open(r.data.signedUrl,"_blank","noopener,noreferrer")}
+ async function review(p:Payment,approve:boolean){if(!db||!user)return;if(approve&&!verified[p.id]){setError("Confirm the actual bank transaction first.");return}if(!approve&&(reason[p.id]||"").trim().length<5){setError("Enter a rejection reason (at least 5 characters).");return}setBusy(true);setError("");const r=await db.rpc("review_logo_payment",{p_payment:p.id,p_approve:approve,p_reason:approve?null:reason[p.id].trim()});if(r.error)setError(r.error.message);else{setNotice(r.data?"Review saved. One credit was issued only when approved.":"This request was already reviewed.");await load(user)}setBusy(false)}
+ const visible=useMemo(()=>orders.filter(p=>(filter==="all"||p.status===filter)&&(p.order_id.toLowerCase().includes(search.toLowerCase())||p.email.toLowerCase().includes(search.toLowerCase()))),[orders,filter,search]);const nav:[typeof tab,string][]=[["overview","Overview"],["payments","Payments"],["users","Users & projects"],["clients","Client management"],["usage","AI usage"],["audit","Audit log"]];
+ if(!db)return <main className="pay-shell"><p>Supabase configuration unavailable.</p></main>;
+ return <main className="pay-shell admin-shell"><div className="admin-top"><a href="/" className="pay-back">← LOGOVA</a><span>PRIVATE ADMIN / CHAMILKA</span></div><div className="pay-hero"><span>OPERATIONS WORKSPACE</span><h1>Control centre</h1><p>Payments, customers, AI usage and security activity—kept behind administrator authorization.</p></div>{error&&<div className="pay-error" role="alert">{error}</div>}{notice&&<div className="pay-note" role="status">{notice}</div>}{loading?<section className="pay-panel"><p>Checking administrator access…</p></section>:!user?<section className="pay-panel admin-login"><h2>Admin sign in</h2><p>Use an approved Supabase administrator account.</p><form onSubmit={signIn}><label>Email<input required type="email" autoComplete="username" value={email} onChange={e=>setEmail(e.target.value)}/></label><label>Password<input required type="password" autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)}/></label><button disabled={busy}>{busy?"Signing in…":"Sign in"}</button></form></section>:!authorized?<section className="pay-panel"><h2>Access denied</h2><p>This account is not an approved Logova administrator.</p><button className="pay-outline" onClick={()=>db.auth.signOut()}>Sign out</button></section>:<><nav className="admin-tabs" aria-label="Admin sections">{nav.map(([id,label])=><button key={id} className={tab===id?"active":""} onClick={()=>setTab(id)}>{label}</button>)}</nav>{summary&&<div className="pay-stats admin-stats"><article><small>REGISTERED USERS</small><b>{summary.users}</b></article><article><small>GENERATED LOGOS</small><b>{summary.logos}</b></article><article><small>VERIFIED REVENUE</small><b>Rs. {summary.revenue_lkr.toLocaleString()}</b></article></div>}
+ {tab==="overview"&&summary&&<><section className="pay-panel"><div className="admin-heading"><div><h2>Business overview</h2><p>Live totals generated from protected database records.</p></div><button className="pay-outline" onClick={()=>load(user)}>Refresh</button></div><div className="admin-metrics"><div><small>Projects</small><b>{summary.projects}</b></div><div><small>Clients</small><b>{summary.clients}</b></div><div><small>Pending payments</small><b>{summary.pending_payments}</b></div><div><small>Failed jobs</small><b>{summary.failed_jobs}</b></div><div><small>Free generations</small><b>{summary.free_generations}</b></div><div><small>Paid generations</small><b>{summary.paid_generations}</b></div></div></section><section className="pay-panel"><h2>Latest system activity</h2>{activity.slice(0,8).map((x,i)=><div className="admin-event" key={i}><span className="pay-status">{x.category}</span><div><strong>{x.event.replaceAll("_"," ")}</strong><p>{x.actor_email} · {x.detail}</p></div><small>{new Date(x.created_at).toLocaleString()}</small></div>)}{!activity.length&&<p>No activity recorded yet.</p>}</section></>}
+ {tab==="payments"&&<section className="pay-panel"><div className="admin-heading"><div><h2>Payment review</h2><p>Confirm the actual bank transaction before giving a credit.</p></div><button className="pay-outline" onClick={()=>load(user)}>Refresh</button></div><div className="pay-filters"><input placeholder="Order ID or customer email" value={search} onChange={e=>setSearch(e.target.value)}/><select value={filter} onChange={e=>setFilter(e.target.value)}><option value="all">All statuses</option><option value="receipt_submitted">Pending verification</option><option value="pending">Awaiting receipt</option><option value="approved">Approved</option><option value="rejected">Rejected</option></select></div>{visible.map(p=><article key={p.id} className="admin-order"><div className="admin-order-main"><div><strong>{p.order_id}</strong><span className={'pay-status '+p.status}>{p.status.replaceAll("_"," ")}</span><p>{p.email}</p><small>{new Date(p.created_at).toLocaleString()} · LKR {p.amount_lkr}</small></div>{p.receipt_path&&<button className="pay-outline" onClick={()=>viewReceipt(p)}>View receipt ↗</button>}</div>{p.status==="receipt_submitted"&&<div className="admin-review"><label><input type="checkbox" checked={!!verified[p.id]} onChange={e=>setVerified({...verified,[p.id]:e.target.checked})}/> I verified this bank transaction</label><div className="admin-review-actions"><button disabled={busy||!verified[p.id]} onClick={()=>review(p,true)}>Approve · +1 credit</button><input placeholder="Reason for rejection" value={reason[p.id]||""} onChange={e=>setReason({...reason,[p.id]:e.target.value})}/><button disabled={busy} className="pay-outline" onClick={()=>review(p,false)}>Reject</button></div></div>}</article>)}{!visible.length&&<p>No matching payment requests.</p>}</section>}
+ {tab==="users"&&<section className="pay-panel"><h2>Users & projects</h2><p>Protected overview only—customer passwords and credentials are never available here.</p><div className="admin-metrics"><div><small>Registered users</small><b>{summary?.users||0}</b></div><div><small>Saved projects</small><b>{summary?.projects||0}</b></div><div><small>Saved logos</small><b>{summary?.logos||0}</b></div></div></section>}
+ {tab==="clients"&&<section className="pay-panel"><h2>Client management</h2>{clients.map(c=><div className="admin-event" key={c.id}><b className="client-badge">{c.name.slice(0,1).toUpperCase()}</b><div><strong>{c.name}</strong><p>{c.email||"No client email"} · Workspace: {c.owner_email}</p></div><small>{c.project_count} project{c.project_count===1?"":"s"}</small></div>)}{!clients.length&&<p>No customer clients added yet.</p>}</section>}
+ {tab==="usage"&&<section className="pay-panel"><h2>AI usage</h2><div className="admin-metrics"><div><small>Gemini tokens recorded</small><b>{(summary?.ai_tokens||0).toLocaleString()}</b></div><div><small>Completed logos</small><b>{summary?.logos||0}</b></div><div><small>Failed generation jobs</small><b>{summary?.failed_jobs||0}</b></div></div><p>Only successful saved Gemini generations are counted as completed logo credits.</p></section>}
+ {tab==="audit"&&<section className="pay-panel"><h2>Audit log</h2><p>Payment state changes, completed generation events and customer client creation are retained here.</p>{activity.map((x,i)=><div className="admin-event" key={i}><span className="pay-status">{x.category}</span><div><strong>{x.event.replaceAll("_"," ")}</strong><p>{x.actor_email} · {x.detail}</p></div><small>{new Date(x.created_at).toLocaleString()}</small></div>)}{!activity.length&&<p>No audit events yet.</p>}</section>}
+ <button className="pay-outline" onClick={()=>db.auth.signOut()}>Sign out</button></>}</main>;
 }
