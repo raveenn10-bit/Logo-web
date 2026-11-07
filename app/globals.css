@@ -25,3 +25,5 @@
 .style-continue strong{color:#19263b}
 @media(max-width:900px){.style-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:650px){.style-section{padding:55px 18px}.style-grid{grid-template-columns:1fr;gap:18px}.style-copy{padding:18px 20px 22px}.style-copy p{min-height:0}.style-continue{align-items:stretch;flex-direction:column;gap:8px}.style-continue button{width:100%}}
+
+.studio textarea{display:block;width:100%;resize:vertical;border:1px solid #d1d7df;border-radius:10px;padding:12px;margin-top:8px;font:inherit}.concept-palette{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0}.concept-palette span{border-top:24px solid;border-radius:5px;padding:8px;font:12px monospace;background:#f4f2ed}.pay-actions{flex-wrap:wrap}
