@@ -3,7 +3,7 @@ import {generateConcept,parseBrief,ProviderError} from "../../../lib/gemini";
 import {renderLogo} from "../../../lib/logo";
 
 export const runtime = "nodejs";
-export const maxDuration = 110;
+export const maxDuration = 60;
 export async function POST(request: Request) {
   const token = request.headers.get("authorization");
   if (!token?.startsWith("Bearer ")) return Response.json({error:"Sign in to create a logo."},{status:401});
