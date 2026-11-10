@@ -9,9 +9,9 @@ Copy `.env.example` to `.env.local` and provide the public Supabase URL and publ
 
 ## Credits and payments
 
-Each verified account receives two free completed concepts. `complete_logo_concept` creates the saved vector and decrements one credit in a single database transaction. Errors roll back the entire transaction. Subsequent concepts require one paid credit. The price is LKR 300.
+Each verified account receives two free completed concepts. `complete_logo_concept` creates the saved vector and decrements one credit in a single database transaction. Errors roll back the entire transaction. Subsequent concepts require one paid credit. The five-concept pack is LKR 300.
 
-`/payments` creates a unique pending order through an authenticated RPC. The WhatsApp button opens a prefilled message for +94 77 066 3154; the customer sends it manually. Receipt upload goes to a private Supabase Storage bucket. A verified administrator checks the bank transaction and approves or rejects the receipt. Approval locks the payment row and adds exactly one credit. A second approval returns false. WhatsApp messages and screenshots never approve payment automatically.
+`/payments` creates a unique pending order through an authenticated RPC. The WhatsApp button opens a prefilled message for +94 77 066 3154; the customer sends it manually. Receipt upload goes to a private Supabase Storage bucket. A verified administrator checks the bank transaction and approves or rejects the receipt. Approval locks the payment row and adds exactly five credits. A second approval returns false. WhatsApp messages and screenshots never approve payment automatically.
 
 The migration files in `supabase/migrations` version the payment flow, receipt policies, role restrictions and credit backed logo creation. They target the **existing** project schema containing `profiles`, `projects`, `brand_briefs` and `logo_concepts`. These changes are already applied to the connected Supabase project; don't reapply blindly to unrelated projects.
 

@@ -16,7 +16,7 @@ const concepts = [
 ];
 
 const faqs = [
-  { question: "Is LOGOVA free to use?", answer: "Yes. Every registered user receives two free completed logo concepts. After those credits are used, each additional successful logo concept costs LKR 300." },
+  { question: "Is LOGOVA free to use?", answer: "Yes. Your first completed logo is free as a guest. After that, Rs. 300 unlocks five additional logo concepts." },
   { question: "Can I edit and download my logo?", answer: "Yes. LOGOVA creates vector-based logo artwork that can be refined in the logo editor and downloaded as genuine SVG or PNG artwork." },
   { question: "What information should I provide for a better logo?", answer: "Add your brand name, industry, audience, personality, preferred colors and meaningful symbols. A clear brand brief helps produce a more relevant creative direction." },
   { question: "Who created LOGOVA?", answer: "LOGOVA is designed and developed by Harsh Apex Digital Solutions in Galle, Sri Lanka, for businesses that need an accessible professional brand identity workflow." },
@@ -57,8 +57,8 @@ const structuredData = {
       creator: { "@id": `${siteUrl}/#organization` },
       featureList: ["AI-assisted brand analysis", "Seven logo directions", "Editable vector logos", "SVG and PNG export", "Brand project storage"],
       offers: [
-        { "@type": "Offer", name: "First two completed logo concepts", price: "0", priceCurrency: "LKR" },
-        { "@type": "Offer", name: "One additional completed logo concept", price: "300", priceCurrency: "LKR" },
+        { "@type": "Offer", name: "First completed logo concept", price: "0", priceCurrency: "LKR" },
+        { "@type": "Offer", name: "Five completed logo concepts", price: "300", priceCurrency: "LKR" },
       ],
     },
     {
@@ -106,7 +106,7 @@ export default function Home() {
           <p className="eyebrow">BUILT BY HARSH APEX DIGITAL SOLUTIONS</p>
           <h1>Professional logo design<br/>that <em>fits your brand.</em></h1>
           <p className="intro">Create an editable AI-assisted logo and complete brand direction for your business. Explore seven professional design approaches, choose the right style and refine it in the vector studio.</p>
-          <div className="pill"><i/> Your first 2 completed logos are free <b>· Rs. 300 after</b></div>
+          <div className="pill"><i/> Your first completed logo is free <b>· 5 more for Rs. 300</b></div>
           <div className="brief" id="create">
             <label>Brand name<input value={brand} onChange={(event) => setBrand(event.target.value)} placeholder="Your brand name"/></label>
             <label>Industry<input value={industry} onChange={(event) => setIndustry(event.target.value)} placeholder="Fashion, hospitality, technology…"/></label>
@@ -126,7 +126,7 @@ export default function Home() {
       <section className="how" id="how" aria-label="How LOGOVA works">
         <div><small>01 — EXPLORE</small><h3>Browse visual directions</h3><p>Compare minimalist, luxury, wordmark and concept-led logo systems before committing.</p></div>
         <div><small>02 — PERSONALISE</small><h3>Build your brand brief</h3><p>Use your business, audience and personality to guide a more relevant result.</p></div>
-        <div id="pricing"><small>03 — CREATE</small><h3>First two logos free</h3><p>Generate, edit and save two concepts free. Continue for Rs. 300 per successful logo concept.</p></div>
+        <div id="pricing"><small>03 — CREATE</small><h3>First logo free</h3><p>Generate, edit and save your first concept free. Then unlock five more concepts for Rs. 300.</p></div>
       </section>
 
       <section className="seo-intro" aria-labelledby="why-logova">

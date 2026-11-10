@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     template: "%s | LOGOVA",
   },
   description:
-    "Create a professional, editable logo and brand identity with LOGOVA by Harsh Apex Digital Solutions. Your first 2 logo concepts are free, then only LKR 300 per concept.",
+    "Create a professional, editable logo and brand identity with LOGOVA by Harsh Apex Digital Solutions. Your first logo concept is free, then only LKR 300 for five concepts.",
   keywords: [
     "AI logo generator Sri Lanka",
     "professional logo maker",
@@ -55,7 +55,7 @@ export const metadata: Metadata = {
     siteName: "LOGOVA AI Logo Builder",
     title: "LOGOVA — Professional AI Logo Builder",
     description:
-      "Build a high-end, editable brand logo. First 2 completed logo concepts are free, then LKR 300 each.",
+      "Build a high-end, editable brand logo. First completed logo concept is free, then LKR 300 for five concepts.",
     images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "LOGOVA AI Logo Builder by Harsh Apex Digital Solutions" }],
   },
   twitter: {
