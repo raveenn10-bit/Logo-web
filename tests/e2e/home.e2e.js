@@ -1,0 +1,21 @@
+const {chromium}=require('playwright');const assert=require('assert');
+const BASE=process.env.BASE||'http://localhost:3100', OUT=process.env.OUT||'.';
+(async()=>{const b=await chromium.launch();const errors=[];
+const p=await b.newPage({viewport:{width:1440,height:900}});p.on('pageerror',e=>errors.push(e.message));
+await p.goto(BASE+'/');await p.getByRole('heading',{level:1}).waitFor();
+assert.equal(await p.getByRole('radio').count(),10,'ten style cards');
+await p.waitForTimeout(1500);await p.screenshot({path:OUT+'/home.png',fullPage:true});
+await p.getByRole('radio',{name:/Emblem/}).click();
+await p.getByRole('button',{name:/Create an emblem logo/}).click();
+await p.waitForURL(/studio\?.*style=emblem/);
+await p.getByRole('radio',{name:/Emblem/}).waitFor();assert.equal(await p.getByRole('radio',{name:/Emblem/}).getAttribute('aria-checked'),'true');
+const m=await b.newPage({viewport:{width:390,height:844},isMobile:true});await m.goto(BASE+'/');
+assert.equal(await m.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth),false,'no horizontal scroll');
+await m.getByRole('button',{name:'Open menu'}).click();await m.getByRole('link',{name:'Pricing'}).waitFor();await m.screenshot({path:OUT+'/home-mobile-menu.png'});
+await m.getByRole('link',{name:'Pricing'}).click();await m.waitForTimeout(400);
+assert.equal(await m.getByRole('button',{name:'Open menu'}).getAttribute('aria-expanded'),'false');
+await m.screenshot({path:OUT+'/home-mobile.png',fullPage:true});
+// Reduced motion → static fallback (no Vanta canvas).
+const r=await b.newContext({reducedMotion:'reduce'});const rp=await r.newPage();await rp.goto(BASE+'/');await rp.waitForTimeout(1500);
+assert.equal(await rp.locator('.vanta-net-background canvas').count(),0,'no WebGL canvas with reduced motion');
+assert.deepEqual(errors,[]);console.log('home e2e: PASS');await b.close();})().catch(e=>{console.error(e);process.exit(1)});

@@ -55,20 +55,28 @@ export default function VantaNetBackground() {
     if (!containerRef.current || shouldUseStaticFallback()) return;
 
     const idleWindow = window as IdleWindow;
+    const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
     let cancelled = false;
+    let visible = true;
+    let loading = false;
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
     let idleId: number | undefined;
 
-    const initialise = async () => {
-      if (cancelled || effectRef.current || !containerRef.current) return;
+    const destroy = () => {
+      effectRef.current?.destroy();
+      effectRef.current = null;
+    };
 
+    const initialise = async () => {
+      if (cancelled || loading || effectRef.current || !containerRef.current || !visible || document.hidden || motion.matches) return;
+      loading = true;
       try {
         const [threeModule, netModule] = await Promise.all([
           import("three"),
           import("vanta/dist/vanta.net.min"),
         ]);
 
-        if (cancelled || effectRef.current || !containerRef.current) return;
+        if (cancelled || effectRef.current || !containerRef.current || !visible || motion.matches) return;
 
         const createNet = netModule.default;
         const effect = createNet({
@@ -95,21 +103,37 @@ export default function VantaNetBackground() {
         effectRef.current = effect;
       } catch {
         // The static cream hero remains the intentional fallback when WebGL fails.
+      } finally {
+        loading = false;
       }
     };
 
+    // Free the GPU while the hero is off-screen or the tab is hidden; resume when it returns.
+    const observer = new IntersectionObserver(([entry]) => {
+      visible = entry.isIntersecting;
+      if (visible) void initialise();
+      else destroy();
+    }, { rootMargin: "120px" });
+    observer.observe(containerRef.current);
+    const onVisibility = () => (document.hidden ? destroy() : void initialise());
+    const onMotion = () => (motion.matches ? destroy() : void initialise());
+    document.addEventListener("visibilitychange", onVisibility);
+    motion.addEventListener("change", onMotion);
+
     if (idleWindow.requestIdleCallback) {
-      idleId = idleWindow.requestIdleCallback(initialise, { timeout: 1200 });
+      idleId = idleWindow.requestIdleCallback(() => void initialise(), { timeout: 1200 });
     } else {
-      timeoutId = setTimeout(initialise, 180);
+      timeoutId = setTimeout(() => void initialise(), 180);
     }
 
     return () => {
       cancelled = true;
+      observer.disconnect();
+      document.removeEventListener("visibilitychange", onVisibility);
+      motion.removeEventListener("change", onMotion);
       if (idleId !== undefined) idleWindow.cancelIdleCallback?.(idleId);
       if (timeoutId !== undefined) clearTimeout(timeoutId);
-      effectRef.current?.destroy();
-      effectRef.current = null;
+      destroy();
     };
   }, []);
 
