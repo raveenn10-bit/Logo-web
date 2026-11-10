@@ -1,27 +1,206 @@
 "use client";
-import {useEffect,useMemo,useState} from "react";
-import {createClient,type User} from "@supabase/supabase-js";
-const url=process.env.NEXT_PUBLIC_SUPABASE_URL||"",key=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||"";
-const db=url&&key?createClient(url,key):null;
-type Payment={id:string;order_id:string;email:string;amount_lkr:number;status:string;receipt_path:string|null;created_at:string};
-type Overview={users:number;projects:number;logos:number;free_generations:number;paid_generations:number;revenue_lkr:number;pending_payments:number;failed_jobs:number;ai_tokens:number;clients:number};
-type Activity={created_at:string;category:string;event:string;actor_email:string;detail:string}; type Client={id:string;name:string;email:string|null;owner_email:string;created_at:string;project_count:number};
-export default function AdminPage(){
- const [user,setUser]=useState<User|null>(null),[email,setEmail]=useState(""),[password,setPassword]=useState(""),[authorized,setAuthorized]=useState(false),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState(""),[notice,setNotice]=useState(""),[tab,setTab]=useState<"overview"|"payments"|"users"|"clients"|"usage"|"audit">("overview"),[menuOpen,setMenuOpen]=useState(false),[orders,setOrders]=useState<Payment[]>([]),[summary,setSummary]=useState<Overview|null>(null),[activity,setActivity]=useState<Activity[]>([]),[clients,setClients]=useState<Client[]>([]),[search,setSearch]=useState(""),[filter,setFilter]=useState("all"),[reason,setReason]=useState<Record<string,string>>({}),[verified,setVerified]=useState<Record<string,boolean>>({});
- async function load(account:User){if(!db)return;setLoading(true);setError("");const role=await db.rpc("is_logo_admin");if(role.error||role.data!==true){setAuthorized(false);setLoading(false);return}setAuthorized(true);const [payments,overview,events,clientData]=await Promise.all([db.rpc("list_logo_payments_admin"),db.rpc("logo_admin_overview"),db.rpc("logo_admin_activity",{p_limit:100}),db.rpc("logo_admin_clients",{p_limit:100})]);if(payments.error||overview.error||events.error||clientData.error)setError(payments.error?.message||overview.error?.message||events.error?.message||clientData.error?.message||"Could not load operations data.");setOrders(payments.data||[]);setSummary(overview.data||null);setActivity(events.data||[]);setClients(clientData.data||[]);setLoading(false)}
- useEffect(()=>{if(!db){setLoading(false);return}db.auth.getUser().then(({data})=>{setUser(data.user);if(data.user)void load(data.user);else setLoading(false)});const {data:{subscription}}=db.auth.onAuthStateChange((_event,session)=>{setUser(session?.user||null);if(session?.user)void load(session.user);else{setAuthorized(false);setLoading(false)}});return()=>subscription.unsubscribe()},[]);
- useEffect(()=>{if(!menuOpen)return;const close=(event:KeyboardEvent)=>{if(event.key==="Escape")setMenuOpen(false)};document.addEventListener("keydown",close);document.body.classList.add("admin-menu-locked");return()=>{document.removeEventListener("keydown",close);document.body.classList.remove("admin-menu-locked")}},[menuOpen]);
- async function signIn(e:React.FormEvent){e.preventDefault();if(!db)return;setBusy(true);setError("");const r=await db.auth.signInWithPassword({email,password});if(r.error)setError(r.error.message);setBusy(false)}
- async function viewReceipt(p:Payment){if(!db||!p.receipt_path)return;const r=await db.storage.from("payment-receipts").createSignedUrl(p.receipt_path,60);if(r.error)setError(r.error.message);else window.open(r.data.signedUrl,"_blank","noopener,noreferrer")}
- async function review(p:Payment,approve:boolean){if(!db||!user)return;if(approve&&!verified[p.id]){setError("Confirm the actual bank transaction first.");return}if(!approve&&(reason[p.id]||"").trim().length<5){setError("Enter a rejection reason (at least 5 characters).");return}setBusy(true);setError("");const r=await db.rpc("review_logo_payment",{p_payment:p.id,p_approve:approve,p_reason:approve?null:reason[p.id].trim()});if(r.error)setError(r.error.message);else{setNotice(r.data?"Review saved. Five credits were issued only when approved.":"This request was already reviewed.");await load(user)}setBusy(false)}
- const visible=useMemo(()=>orders.filter(p=>(filter==="all"||p.status===filter)&&(p.order_id.toLowerCase().includes(search.toLowerCase())||p.email.toLowerCase().includes(search.toLowerCase()))),[orders,filter,search]);const nav:[typeof tab,string][]=[["overview","Overview"],["payments","Payments"],["users","Users & projects"],["clients","Client management"],["usage","AI usage"],["audit","Audit log"]];const selectTab=(next:typeof tab)=>{setTab(next);setMenuOpen(false)};
- if(!db)return <main className="pay-shell"><p>Supabase configuration unavailable.</p></main>;
- return <main className="pay-shell admin-shell"><div className="admin-top"><a href="/" className="pay-back">← LOGOVA</a><span>PRIVATE ADMIN / CHAMILKA</span>{authorized&&<button type="button" className={'admin-menu-toggle '+(menuOpen?'is-open':'')} aria-label={menuOpen?"Close admin menu":"Open admin menu"} aria-expanded={menuOpen} aria-controls="admin-navigation" onClick={()=>setMenuOpen(open=>!open)}><i/><i/><i/></button>}</div><div className="pay-hero"><span>OPERATIONS WORKSPACE</span><h1>Control centre</h1><p>Payments, customers, AI usage and security activity—kept behind administrator authorization.</p></div>{error&&<div className="pay-error" role="alert">{error}</div>}{notice&&<div className="pay-note" role="status">{notice}</div>}{loading?<section className="pay-panel"><p>Checking administrator access…</p></section>:!user?<section className="pay-panel admin-login"><h2>Admin sign in</h2><p>Use an approved Supabase administrator account.</p><form onSubmit={signIn}><label>Email<input required type="email" autoComplete="username" value={email} onChange={e=>setEmail(e.target.value)}/></label><label>Password<input required type="password" autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)}/></label><button disabled={busy}>{busy?"Signing in…":"Sign in"}</button></form></section>:!authorized?<section className="pay-panel"><h2>Access denied</h2><p>This account is not an approved Logova administrator.</p><button className="pay-outline" onClick={()=>db.auth.signOut()}>Sign out</button></section>:<>{menuOpen&&<button type="button" className="admin-menu-backdrop" aria-label="Close admin menu" onClick={()=>setMenuOpen(false)}/>}<nav id="admin-navigation" className={'admin-tabs '+(menuOpen?'is-open':'')} aria-label="Admin sections"><div className="admin-menu-title"><span>ADMIN NAVIGATION</span><button type="button" aria-label="Close admin menu" onClick={()=>setMenuOpen(false)}>×</button></div>{nav.map(([id,label],index)=><button key={id} className={tab===id?"active":""} onClick={()=>selectTab(id)}><span>{String(index+1).padStart(2,"0")}</span>{label}</button>)}</nav>{summary&&<div className="pay-stats admin-stats"><article><small>REGISTERED USERS</small><b>{summary.users}</b></article><article><small>GENERATED LOGOS</small><b>{summary.logos}</b></article><article><small>VERIFIED REVENUE</small><b>Rs. {summary.revenue_lkr.toLocaleString()}</b></article></div>}
- {tab==="overview"&&summary&&<><section className="pay-panel"><div className="admin-heading"><div><h2>Business overview</h2><p>Live totals generated from protected database records.</p></div><button className="pay-outline" onClick={()=>load(user)}>Refresh</button></div><div className="admin-metrics"><div><small>Projects</small><b>{summary.projects}</b></div><div><small>Clients</small><b>{summary.clients}</b></div><div><small>Pending payments</small><b>{summary.pending_payments}</b></div><div><small>Failed jobs</small><b>{summary.failed_jobs}</b></div><div><small>Free generations</small><b>{summary.free_generations}</b></div><div><small>Paid generations</small><b>{summary.paid_generations}</b></div></div></section><section className="pay-panel"><h2>Latest system activity</h2>{activity.slice(0,8).map((x,i)=><div className="admin-event" key={i}><span className="pay-status">{x.category}</span><div><strong>{x.event.replaceAll("_"," ")}</strong><p>{x.actor_email} · {x.detail}</p></div><small>{new Date(x.created_at).toLocaleString()}</small></div>)}{!activity.length&&<p>No activity recorded yet.</p>}</section></>}
- {tab==="payments"&&<section className="pay-panel"><div className="admin-heading"><div><h2>Payment review</h2><p>Confirm the actual bank transaction before giving a credit.</p></div><button className="pay-outline" onClick={()=>load(user)}>Refresh</button></div><div className="pay-filters"><input placeholder="Order ID or customer email" value={search} onChange={e=>setSearch(e.target.value)}/><select value={filter} onChange={e=>setFilter(e.target.value)}><option value="all">All statuses</option><option value="receipt_submitted">Pending verification</option><option value="pending">Awaiting receipt</option><option value="approved">Approved</option><option value="rejected">Rejected</option></select></div>{visible.map(p=><article key={p.id} className="admin-order"><div className="admin-order-main"><div><strong>{p.order_id}</strong><span className={'pay-status '+p.status}>{p.status.replaceAll("_"," ")}</span><p>{p.email}</p><small>{new Date(p.created_at).toLocaleString()} · LKR {p.amount_lkr}</small></div>{p.receipt_path&&<button className="pay-outline" onClick={()=>viewReceipt(p)}>View receipt ↗</button>}</div>{p.status==="receipt_submitted"&&<div className="admin-review"><label><input type="checkbox" checked={!!verified[p.id]} onChange={e=>setVerified({...verified,[p.id]:e.target.checked})}/> I verified this bank transaction</label><div className="admin-review-actions"><button disabled={busy||!verified[p.id]} onClick={()=>review(p,true)}>Approve · +1 credit</button><input placeholder="Reason for rejection" value={reason[p.id]||""} onChange={e=>setReason({...reason,[p.id]:e.target.value})}/><button disabled={busy} className="pay-outline" onClick={()=>review(p,false)}>Reject</button></div></div>}</article>)}{!visible.length&&<p>No matching payment requests.</p>}</section>}
- {tab==="users"&&<section className="pay-panel"><h2>Users & projects</h2><p>Protected overview only—customer passwords and credentials are never available here.</p><div className="admin-metrics"><div><small>Registered users</small><b>{summary?.users||0}</b></div><div><small>Saved projects</small><b>{summary?.projects||0}</b></div><div><small>Saved logos</small><b>{summary?.logos||0}</b></div></div></section>}
- {tab==="clients"&&<section className="pay-panel"><h2>Client management</h2>{clients.map(c=><div className="admin-event" key={c.id}><b className="client-badge">{c.name.slice(0,1).toUpperCase()}</b><div><strong>{c.name}</strong><p>{c.email||"No client email"} · Workspace: {c.owner_email}</p></div><small>{c.project_count} project{c.project_count===1?"":"s"}</small></div>)}{!clients.length&&<p>No customer clients added yet.</p>}</section>}
- {tab==="usage"&&<section className="pay-panel"><h2>AI usage</h2><div className="admin-metrics"><div><small>Gemini tokens recorded</small><b>{(summary?.ai_tokens||0).toLocaleString()}</b></div><div><small>Completed logos</small><b>{summary?.logos||0}</b></div><div><small>Failed generation jobs</small><b>{summary?.failed_jobs||0}</b></div></div><p>Only successful saved Gemini generations are counted as completed logo credits.</p></section>}
- {tab==="audit"&&<section className="pay-panel"><h2>Audit log</h2><p>Payment state changes, completed generation events and customer client creation are retained here.</p>{activity.map((x,i)=><div className="admin-event" key={i}><span className="pay-status">{x.category}</span><div><strong>{x.event.replaceAll("_"," ")}</strong><p>{x.actor_email} · {x.detail}</p></div><small>{new Date(x.created_at).toLocaleString()}</small></div>)}{!activity.length&&<p>No audit events yet.</p>}</section>}
- <button className="pay-outline" onClick={()=>db.auth.signOut()}>Sign out</button></>}</main>;
+import {useCallback, useEffect, useMemo, useState} from "react";
+import type {User} from "@supabase/supabase-js";
+import "../../components/studio.css";
+import "../../components/admin.css";
+import {browserDb, oauthRedirect, rememberReturn, svgDataUri} from "../../lib/client";
+
+type Tab = "overview" | "payments" | "users" | "generations" | "audit" | "settings";
+type Overview = Record<string, number>;
+type Payment = {id: string; order_id: string; email: string; amount_lkr: number; status: string; receipt_path: string | null; created_at: string; reviewed_at?: string | null; credits_granted?: number | null; rejection_reason?: string | null};
+type AdminUser = {id: string; email: string; provider: string; is_guest: boolean; created_at: string; last_sign_in_at: string | null; free_used: number; paid_credits: number; logos: number; approved_payments: number; is_admin: boolean};
+type Job = {id: string; created_at: string; completed_at: string | null; status: string; provider: string | null; owner_email: string; is_guest: boolean; brand: string; style: string; concept_id: string | null; svg: string | null};
+type Audit = {created_at: string; category: string; action: string; admin_email: string; target: string; detail: string};
+type Day = {day: string; generations: number; completed: number; failed: number; new_users: number; revenue_lkr: number};
+type Settings = {credits_per_payment: number; free_generations: number; guest_free_generations: number; guest_daily_limit_per_network: number; generation_enabled: boolean; announcement: string | null; updated_at?: string};
+const nav: [Tab, string][] = [["overview", "Overview"], ["payments", "Payments"], ["users", "Users & credits"], ["generations", "Generations"], ["audit", "Audit log"], ["settings", "Settings"]];
+const MIGRATION_HINT = "This section needs the database migration supabase/migrations/20261111_logova_v2_entitlements_admin.sql.";
+const missing = (e: {code?: string; message?: string} | null) => !!e && (e.code === "PGRST202" || /could not find the function/i.test(e.message || ""));
+const when = (v: string | null | undefined) => v ? new Date(v).toLocaleString() : "—";
+
+export default function AdminPage() {
+  const db = browserDb();
+  const [user, setUser] = useState<User | null>(null), [authorized, setAuthorized] = useState(false), [loading, setLoading] = useState(true);
+  const [email, setEmail] = useState(""), [password, setPassword] = useState("");
+  const [tab, setTab] = useState<Tab>("overview"), [menuOpen, setMenuOpen] = useState(false), [busy, setBusy] = useState(false), [error, setError] = useState(""), [notice, setNotice] = useState("");
+  const [summary, setSummary] = useState<Overview | null>(null), [days, setDays] = useState<Day[]>([]), [payments, setPayments] = useState<Payment[]>([]), [users, setUsers] = useState<AdminUser[]>([]), [jobs, setJobs] = useState<Job[]>([]), [audit, setAudit] = useState<Audit[]>([]), [settings, setSettings] = useState<Settings | null>(null);
+  const [needsMigration, setNeedsMigration] = useState<Record<string, boolean>>({});
+  const [paySearch, setPaySearch] = useState(""), [payFilter, setPayFilter] = useState("receipt_submitted"), [verified, setVerified] = useState<Record<string, boolean>>({}), [reason, setReason] = useState<Record<string, string>>({});
+  const [userSearch, setUserSearch] = useState(""), [adjust, setAdjust] = useState<{id: string; email: string} | null>(null), [delta, setDelta] = useState(5), [adjustReason, setAdjustReason] = useState(""), [jobFilter, setJobFilter] = useState("all"), [preview, setPreview] = useState<Job | null>(null);
+
+  const flag = (k: string, v: boolean) => setNeedsMigration(m => ({...m, [k]: v}));
+  const loadTab = useCallback(async (which: Tab) => {
+    if (!db) return;
+    setError("");
+    if (which === "overview") {
+      const [o, d] = await Promise.all([db.rpc("logo_admin_overview"), db.rpc("logo_admin_daily", {p_days: 14})]);
+      if (o.error) setError(o.error.message); else setSummary(o.data as Overview);
+      flag("daily", missing(d.error)); setDays((d.data || []) as Day[]);
+    }
+    if (which === "payments") {
+      let r = await db.rpc("logo_admin_payments", {p_status: payFilter, p_search: paySearch.trim() || null, p_limit: 200});
+      if (missing(r.error)) r = await db.rpc("list_logo_payments_admin");
+      if (r.error) setError(r.error.message); else setPayments((r.data || []) as Payment[]);
+      const st = await db.rpc("logo_admin_get_settings"); if (!st.error && st.data) setSettings(st.data as Settings);
+    }
+    if (which === "users") { const r = await db.rpc("logo_admin_users", {p_search: userSearch.trim() || null, p_limit: 200}); flag("users", missing(r.error)); if (r.error && !missing(r.error)) setError(r.error.message); setUsers((r.data || []) as AdminUser[]); }
+    if (which === "generations") { const r = await db.rpc("logo_admin_generations", {p_status: jobFilter, p_limit: 60}); flag("generations", missing(r.error)); if (r.error && !missing(r.error)) setError(r.error.message); setJobs((r.data || []) as Job[]); }
+    if (which === "audit") { const r = await db.rpc("logo_admin_audit", {p_limit: 200}); flag("audit", missing(r.error)); if (r.error && !missing(r.error)) setError(r.error.message); setAudit((r.data || []) as Audit[]); }
+    if (which === "settings") { setSettings(null); const r = await db.rpc("logo_admin_get_settings"); flag("settings", missing(r.error)); if (r.error && !missing(r.error)) setError(r.error.message); setSettings((r.data || null) as Settings | null); }
+  }, [db, payFilter, paySearch, userSearch, jobFilter]);
+
+  const checkAccess = useCallback(async (u: User | null) => {
+    if (!db) return;
+    setUser(u);
+    if (!u) { setAuthorized(false); setLoading(false); return; }
+    const role = await db.rpc("is_logo_admin");
+    setAuthorized(role.data === true); setLoading(false);
+  }, [db]);
+  useEffect(() => {
+    if (!db) { setLoading(false); return; }
+    void db.auth.getSession().then(({data}) => checkAccess(data.session?.user || null));
+    const {data: {subscription}} = db.auth.onAuthStateChange((_e, s) => { void checkAccess(s?.user || null); });
+    return () => subscription.unsubscribe();
+  }, [db, checkAccess]);
+  useEffect(() => { if (authorized) void loadTab(tab); }, [authorized, tab, loadTab]);
+  useEffect(() => { if (authorized && db) void db.rpc("logo_admin_overview").then(o => { if (!o.error) setSummary(o.data as Overview); }); }, [authorized, db]);
+  useEffect(() => {
+    if (!menuOpen) return;
+    const close = (e: KeyboardEvent) => { if (e.key === "Escape") setMenuOpen(false); };
+    document.addEventListener("keydown", close); document.body.style.overflow = "hidden";
+    return () => { document.removeEventListener("keydown", close); document.body.style.overflow = ""; };
+  }, [menuOpen]);
+
+  async function signIn(e: React.FormEvent) { e.preventDefault(); if (!db) return; setBusy(true); setError(""); const r = await db.auth.signInWithPassword({email, password}); if (r.error) setError(r.error.message); setBusy(false); }
+  async function google() { if (!db) return; rememberReturn("/chamilka"); const r = await db.auth.signInWithOAuth({provider: "google", options: {redirectTo: oauthRedirect(), queryParams: {prompt: "select_account"}}}); if (r.error) setError(r.error.message); }
+  async function viewReceipt(p: Payment) { if (!db || !p.receipt_path) return; const r = await db.storage.from("payment-receipts").createSignedUrl(p.receipt_path, 60); if (r.error) setError(r.error.message); else window.open(r.data.signedUrl, "_blank", "noopener,noreferrer"); }
+  async function review(p: Payment, approve: boolean) {
+    if (!db) return;
+    if (approve && !verified[p.id]) { setError("Confirm the actual bank transaction first."); return; }
+    if (!approve && (reason[p.id] || "").trim().length < 5) { setError("Enter a rejection reason (at least 5 characters)."); return; }
+    if (approve && !window.confirm(`Approve ${p.order_id} for ${p.email}? This adds ${settings?.credits_per_payment ?? "the configured"} credits and cannot be undone.`)) return;
+    setBusy(true); setError("");
+    const r = await db.rpc("review_logo_payment", {p_payment: p.id, p_approve: approve, p_reason: approve ? null : reason[p.id].trim()});
+    if (r.error) setError(r.error.message); else setNotice(r.data ? (approve ? `${p.order_id} approved — credits added.` : `${p.order_id} rejected.`) : "This request was already reviewed. No credits were added.");
+    await loadTab("payments"); const o = await db.rpc("logo_admin_overview"); if (!o.error) setSummary(o.data as Overview); setBusy(false);
+  }
+  async function saveAdjust(e: React.FormEvent) {
+    e.preventDefault(); if (!db || !adjust) return;
+    setBusy(true); setError("");
+    const r = await db.rpc("logo_admin_adjust_credits", {p_user: adjust.id, p_delta: delta, p_reason: adjustReason.trim()});
+    if (r.error) setError(r.error.message); else { setNotice(`Credits updated for ${adjust.email || "user"}: balance ${(r.data as {paid_credits: number}).paid_credits}.`); setAdjust(null); setAdjustReason(""); await loadTab("users"); }
+    setBusy(false);
+  }
+  async function saveSettings(e: React.FormEvent) {
+    e.preventDefault(); if (!db || !settings) return;
+    setBusy(true); setError("");
+    const r = await db.rpc("logo_admin_update_settings", {p_settings: settings});
+    if (r.error) setError(r.error.message); else { setSettings(r.data as Settings); setNotice("Settings saved and recorded in the audit log."); }
+    setBusy(false);
+  }
+  const select = (t: Tab) => { setTab(t); setMenuOpen(false); setNotice(""); };
+  const maxDay = useMemo(() => Math.max(1, ...days.map(d => d.completed)), [days]);
+
+  if (!db) return <main className="lv-shell"><p className="lv-panel lv-pad">Supabase configuration unavailable.</p></main>;
+  if (loading) return <main className="lv-shell"><p className="lv-panel lv-pad" role="status">Checking administrator access…</p></main>;
+  if (!user || !authorized) return <main className="lv-shell"><header className="lv-top"><a href="/" className="lv-brand"><span aria-hidden="true">✦</span> LOGO<b>VA</b></a></header>
+    <section className="lv-panel lv-pad lv-auth lv-admin-gate"><p className="lv-kicker">PRIVATE ADMIN</p>
+      {!user ? <><h1>Administrator sign in</h1><p className="lv-muted">Only approved LOGOVA administrators can access this area. Access is verified by the database on every request.</p>
+        {error && <p className="lv-error" role="alert">{error}</p>}
+        <button className="lv-btn lv-btn-google lv-wide" onClick={google}><span aria-hidden="true">G</span> Continue with Google</button>
+        <div className="lv-divider"><span>or</span></div>
+        <form className="lv-form" onSubmit={signIn}><label htmlFor="a-email">Email</label><input id="a-email" required type="email" autoComplete="username" value={email} onChange={e => setEmail(e.target.value)}/><label htmlFor="a-pass">Password</label><input id="a-pass" required type="password" autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)}/><button className="lv-btn lv-btn-dark" disabled={busy}>{busy ? "Signing in…" : "Sign in"}</button></form>
+      </> : <><h1>Access denied</h1><p className="lv-muted">This account is not an approved LOGOVA administrator.</p><button className="lv-btn lv-btn-ghost" onClick={() => db.auth.signOut()}>Sign out</button></>}
+    </section></main>;
+
+  return <main className="lv-shell lv-admin">
+    <header className="lv-top"><a href="/" className="lv-brand" aria-label="LOGOVA home"><span aria-hidden="true">✦</span> LOGO<b>VA</b></a>
+      <div className="lv-top-right"><span className="lv-meter lv-admin-who">{user.email}</span>
+        <button className="lv-burger" aria-label={menuOpen ? "Close admin menu" : "Open admin menu"} aria-expanded={menuOpen} aria-controls="admin-nav" onClick={() => setMenuOpen(o => !o)}><i/><i/><i/></button></div></header>
+    <div className="lv-admin-layout">
+      {menuOpen && <button className="lv-admin-scrim" aria-label="Close admin menu" onClick={() => setMenuOpen(false)}/>}
+      <nav id="admin-nav" className={"lv-admin-nav" + (menuOpen ? " is-open" : "")} aria-label="Admin sections">
+        <p className="lv-kicker">CONTROL CENTRE</p>
+        {nav.map(([id, label]) => <button key={id} aria-current={tab === id ? "page" : undefined} className={tab === id ? "is-active" : ""} onClick={() => select(id)}>{label}{id === "payments" && !!summary?.awaiting_review && <span className="lv-badge">{summary.awaiting_review}</span>}</button>)}
+        <button className="lv-admin-signout" onClick={() => db.auth.signOut()}>Sign out</button>
+      </nav>
+      <section className="lv-admin-main" aria-live="polite">
+        <div className="lv-admin-head"><div><p className="lv-kicker">ADMIN / {tab.toUpperCase()}</p><h1>{nav.find(n => n[0] === tab)![1]}</h1></div><button className="lv-btn lv-btn-ghost lv-sm" onClick={() => loadTab(tab)}>Refresh</button></div>
+        {error && <p className="lv-error" role="alert">{error}</p>}
+        {notice && <p className="lv-note" role="status">{notice}</p>}
+
+        {tab === "overview" && summary && <>
+          <div className="lv-kpis">{[["Registered users", summary.registered_users ?? summary.users], ["Guest sessions", summary.guest_users ?? "—"], ["Logos created", summary.logos], ["Generations today", summary.generations_today ?? "—"], ["Verified revenue", "LKR " + Number(summary.revenue_lkr || 0).toLocaleString()], ["Awaiting review", summary.awaiting_review ?? summary.pending_payments], ["Paid / free generations", `${summary.paid_generations} / ${summary.free_generations}`], ["Failed jobs", summary.failed_jobs], ["Unused paid credits", summary.outstanding_credits ?? "—"], ["Gemini tokens", Number(summary.ai_tokens || 0).toLocaleString()]].map(([k, v]) => <article key={k as string}><small>{k}</small><b>{v}</b></article>)}</div>
+          <section className="lv-panel lv-pad"><h2>Completed logos · last 14 days</h2>
+            {needsMigration.daily ? <p className="lv-muted">{MIGRATION_HINT}</p> : <>
+              <div className="lv-chart" role="img" aria-label={"Completed logos per day: " + days.map(d => `${d.day} ${d.completed}`).join(", ")}>
+                {days.map(d => <div key={d.day} className="lv-bar-col" tabIndex={0}><span className="lv-bar" style={{height: `${(d.completed / maxDay) * 100}%`}}/><span className="lv-tip" role="tooltip">{new Date(d.day).toLocaleDateString(undefined, {month: "short", day: "numeric"})}: {d.completed} completed · {d.failed} failed · {d.new_users} new users · LKR {d.revenue_lkr}</span><small>{new Date(d.day).getDate()}</small></div>)}
+              </div>
+              <details className="lv-table-toggle"><summary>View as table</summary><div className="lv-table-wrap"><table><thead><tr><th>Day</th><th>Started</th><th>Completed</th><th>Failed</th><th>New users</th><th>Revenue (LKR)</th></tr></thead><tbody>{days.map(d => <tr key={d.day}><td>{d.day}</td><td>{d.generations}</td><td>{d.completed}</td><td>{d.failed}</td><td>{d.new_users}</td><td>{d.revenue_lkr}</td></tr>)}</tbody></table></div></details>
+            </>}
+          </section>
+        </>}
+
+        {tab === "payments" && <section className="lv-panel lv-pad">
+          <p className="lv-muted">Check the actual bank transaction before approving. Each approval adds the configured credit pack exactly once.</p>
+          <form className="lv-filters" onSubmit={e => { e.preventDefault(); void loadTab("payments"); }}><label className="lv-sr" htmlFor="p-search">Search payments</label><input id="p-search" placeholder="Order ID or customer email" value={paySearch} onChange={e => setPaySearch(e.target.value)}/>
+            <label className="lv-sr" htmlFor="p-filter">Status</label><select id="p-filter" value={payFilter} onChange={e => setPayFilter(e.target.value)}><option value="all">All statuses</option><option value="receipt_submitted">Awaiting verification</option><option value="pending">Awaiting receipt</option><option value="approved">Approved</option><option value="rejected">Rejected</option></select><button className="lv-btn lv-btn-dark lv-sm">Search</button></form>
+          <div className="lv-orders">{payments.filter(p => payFilter === "all" || p.status === payFilter).map(p => <article key={p.id} className="lv-order lv-admin-order">
+            <div><code>{p.order_id}</code><span className={"lv-status lv-status-" + p.status}>{p.status.replaceAll("_", " ")}</span><p className="lv-muted">{p.email} · LKR {p.amount_lkr} · {when(p.created_at)}{p.credits_granted ? ` · ${p.credits_granted} credits granted` : ""}</p>{p.rejection_reason && <p className="lv-muted">Reason: {p.rejection_reason}</p>}</div>
+            <div className="lv-order-actions">{p.receipt_path && <button className="lv-btn lv-btn-ghost lv-sm" onClick={() => viewReceipt(p)}>View receipt ↗</button>}</div>
+            {p.status === "receipt_submitted" && <div className="lv-review"><label><input type="checkbox" checked={!!verified[p.id]} onChange={e => setVerified({...verified, [p.id]: e.target.checked})}/> I verified this bank transaction</label>
+              <div className="lv-review-actions"><button className="lv-btn lv-btn-primary lv-sm" disabled={busy || !verified[p.id]} onClick={() => review(p, true)}>Approve</button>
+                <label className="lv-sr" htmlFor={"r-" + p.id}>Rejection reason</label><input id={"r-" + p.id} placeholder="Reason for rejection" value={reason[p.id] || ""} onChange={e => setReason({...reason, [p.id]: e.target.value})}/>
+                <button className="lv-btn lv-btn-ghost lv-sm" disabled={busy} onClick={() => review(p, false)}>Reject</button></div></div>}
+          </article>)}{!payments.length && <p className="lv-muted">No matching payment requests.</p>}</div>
+        </section>}
+
+        {tab === "users" && <section className="lv-panel lv-pad">{needsMigration.users ? <p className="lv-muted">{MIGRATION_HINT}</p> : <>
+          <form className="lv-filters" onSubmit={e => { e.preventDefault(); void loadTab("users"); }}><label className="lv-sr" htmlFor="u-search">Search users</label><input id="u-search" placeholder="Email or user ID" value={userSearch} onChange={e => setUserSearch(e.target.value)}/><button className="lv-btn lv-btn-dark lv-sm">Search</button></form>
+          <div className="lv-table-wrap"><table className="lv-table"><thead><tr><th>User</th><th>Joined</th><th>Free used</th><th>Paid credits</th><th>Logos</th><th>Paid orders</th><th><span className="lv-sr">Actions</span></th></tr></thead><tbody>
+            {users.map(u => <tr key={u.id}><td><b>{u.email || (u.is_guest ? "Guest session" : "No email")}</b><small>{u.provider}{u.is_admin ? " · admin" : ""}</small></td><td>{new Date(u.created_at).toLocaleDateString()}</td><td>{u.free_used}</td><td>{u.paid_credits}</td><td>{u.logos}</td><td>{u.approved_payments}</td>
+              <td>{!u.is_guest && <button className="lv-btn lv-btn-ghost lv-sm" onClick={() => { setAdjust({id: u.id, email: u.email}); setDelta(5); setAdjustReason(""); }}>Adjust credits</button>}</td></tr>)}
+          </tbody></table></div>{!users.length && <p className="lv-muted">No users found.</p>}</>}
+        </section>}
+
+        {tab === "generations" && <section className="lv-panel lv-pad">{needsMigration.generations ? <p className="lv-muted">{MIGRATION_HINT}</p> : <>
+          <div className="lv-filters"><label className="lv-sr" htmlFor="g-filter">Status</label><select id="g-filter" value={jobFilter} onChange={e => setJobFilter(e.target.value)}><option value="all">All jobs</option><option value="completed">Completed</option><option value="processing">Processing</option><option value="failed">Failed</option></select></div>
+          <div className="lv-gen-grid">{jobs.map(j => <article key={j.id} className="lv-gen">
+            {j.svg ? <button className="lv-gen-art" onClick={() => setPreview(j)} aria-label={"Preview logo for " + j.brand}><img src={svgDataUri(j.svg)} alt="" loading="lazy"/></button> : <div className="lv-gen-art lv-gen-empty">{j.status}</div>}
+            <div><b>{j.brand || "Untitled"}</b><span className={"lv-status lv-status-" + j.status}>{j.status}</span></div>
+            <small>{j.owner_email}{j.is_guest ? " (guest)" : ""} · {j.style || "—"}</small><small>{j.provider || "—"} · {when(j.created_at)}</small>
+          </article>)}</div>{!jobs.length && <p className="lv-muted">No generation jobs yet.</p>}</>}
+        </section>}
+
+        {tab === "audit" && <section className="lv-panel lv-pad">{needsMigration.audit ? <p className="lv-muted">{MIGRATION_HINT}</p> : <>
+          <p className="lv-muted">Every payment review, credit adjustment and settings change, with the administrator who made it.</p>
+          <div className="lv-table-wrap"><table className="lv-table"><thead><tr><th>When</th><th>Type</th><th>Action</th><th>Admin</th><th>Target</th><th>Detail</th></tr></thead><tbody>
+            {audit.map((a, i) => <tr key={i}><td>{when(a.created_at)}</td><td><span className="lv-status">{a.category}</span></td><td>{a.action.replaceAll("_", " ")}</td><td>{a.admin_email}</td><td>{a.target}</td><td className="lv-detail">{a.detail}</td></tr>)}
+          </tbody></table></div>{!audit.length && <p className="lv-muted">No audit events yet.</p>}</>}
+        </section>}
+
+        {tab === "settings" && <section className="lv-panel lv-pad">{needsMigration.settings || !settings ? <p className="lv-muted">{needsMigration.settings ? MIGRATION_HINT : "Loading settings…"}</p> :
+          <form className="lv-settings" onSubmit={saveSettings}>
+            <label><span>Credits per approved LKR 300 payment</span><input type="number" min={1} max={50} value={settings.credits_per_payment} onChange={e => setSettings({...settings, credits_per_payment: Number(e.target.value)})}/></label>
+            <label><span>Free logos per registered account (incl. guest logo)</span><input type="number" min={0} max={2} value={settings.free_generations} onChange={e => setSettings({...settings, free_generations: Number(e.target.value)})}/></label>
+            <label><span>Free logos before sign-in (guest)</span><input type="number" min={0} max={2} value={settings.guest_free_generations} onChange={e => setSettings({...settings, guest_free_generations: Number(e.target.value)})}/></label>
+            <label><span>Guest logos per network per day</span><input type="number" min={0} max={50} value={settings.guest_daily_limit_per_network} onChange={e => setSettings({...settings, guest_daily_limit_per_network: Number(e.target.value)})}/></label>
+            <label className="lv-check"><input type="checkbox" checked={settings.generation_enabled} onChange={e => setSettings({...settings, generation_enabled: e.target.checked})}/> Logo generation enabled</label>
+            <label className="lv-span"><span>Announcement banner (shown in the studio; empty to hide)</span><input maxLength={280} value={settings.announcement || ""} onChange={e => setSettings({...settings, announcement: e.target.value})}/></label>
+            <div className="lv-span lv-actions"><button className="lv-btn lv-btn-primary" disabled={busy}>Save settings</button><small className="lv-muted">Last updated {when(settings.updated_at)}</small></div>
+          </form>}
+        </section>}
+      </section>
+    </div>
+
+    {adjust && <div className="lv-backdrop" role="presentation" onMouseDown={e => { if (e.target === e.currentTarget) setAdjust(null); }}><form className="lv-modal" role="dialog" aria-modal="true" aria-labelledby="adj-title" onSubmit={saveAdjust} onKeyDown={e => { if (e.key === "Escape") setAdjust(null); }}>
+      <button type="button" className="lv-close" onClick={() => setAdjust(null)} aria-label="Close">×</button>
+      <p className="lv-kicker">CREDIT MANAGEMENT</p><h2 id="adj-title">Adjust paid credits</h2><p>{adjust.email}</p>
+      <label htmlFor="adj-delta">Change (use a negative number to remove)</label><input id="adj-delta" type="number" min={-100} max={100} required value={delta} onChange={e => setDelta(Number(e.target.value))} autoFocus/>
+      <label htmlFor="adj-reason">Reason (recorded in the audit log)</label><input id="adj-reason" required minLength={5} maxLength={300} value={adjustReason} onChange={e => setAdjustReason(e.target.value)} placeholder="e.g. Refund for failed order LOG-…"/>
+      <button className="lv-btn lv-btn-primary lv-wide" disabled={busy || !delta || adjustReason.trim().length < 5}>Save change</button>
+    </form></div>}
+    {preview?.svg && <div className="lv-backdrop" role="presentation" onMouseDown={e => { if (e.target === e.currentTarget) setPreview(null); }}><section className="lv-modal lv-preview" role="dialog" aria-modal="true" aria-label={"Logo for " + preview.brand} onKeyDown={e => { if (e.key === "Escape") setPreview(null); }}>
+      <button className="lv-close" onClick={() => setPreview(null)} aria-label="Close" autoFocus>×</button><img src={svgDataUri(preview.svg)} alt={"Logo for " + preview.brand}/><p><b>{preview.brand}</b> · {preview.style} · {preview.owner_email}</p></section></div>}
+  </main>;
 }

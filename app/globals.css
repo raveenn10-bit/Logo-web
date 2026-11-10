@@ -42,3 +42,55 @@
 .studio-result h2{color:#fff!important;margin-top:8px}.studio-kicker{display:block;color:#ff9a3d;font:700 10px 'DM Mono';letter-spacing:2.2px}
 .studio-result-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(260px,.85fr);gap:24px;align-items:center}.studio-artboard{padding:18px;border-radius:18px;background:#25282e;box-shadow:inset 0 0 0 1px #ffffff12}.studio-artboard .studio-preview{display:block;background-color:#fff;min-height:330px;object-fit:contain;border-radius:10px;box-shadow:0 18px 40px #0007}.studio-result-info{min-width:0}.studio-result-info .concept-notes{color:#d4d8df}.studio-result-info .concept-notes p{color:#c7ccd4}.studio-result-info .concept-notes strong{color:#fff}.studio-result-info .concept-palette span{color:#d9dde5}.studio-result .pay-actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:22px}.studio-result .pay-actions button,.studio-result .pay-actions .pay-cta{font-size:12px}.studio-result .pay-outline{background:#25282e;color:#fff;border-color:#4b525d}
 @media(max-width:760px){.studio-result-grid{grid-template-columns:1fr}.studio-artboard .studio-preview{min-height:260px}.studio-result .pay-actions{display:grid;grid-template-columns:1fr 1fr}.studio-result .pay-actions .pay-cta{grid-column:1/-1;text-align:center}}
+/* ---- LOGOVA v2 homepage additions ---- */
+.home-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.home-header{position:relative;z-index:20}
+.home-header .logo{text-decoration:none;color:var(--ink)}
+.home-header nav a{padding:6px 2px;border-bottom:2px solid transparent;transition:border-color .2s,color .2s}
+.home-header nav a:hover,.home-header nav a:focus-visible{color:var(--navy);border-color:var(--orange);outline:0}
+.home-header-cta{display:flex;align-items:center;gap:10px}
+.home-start{padding:12px 18px;border-radius:10px;background:var(--navy);color:#fff;font-weight:700;text-decoration:none;font-size:14px;transition:transform .2s,box-shadow .2s}
+.home-start:hover{transform:translateY(-2px);box-shadow:0 10px 22px #19263b33}
+.home-burger{display:none;width:44px;height:44px;padding:12px 11px;background:#fff!important;border:1px solid #cbd2dc!important;flex-direction:column;justify-content:space-between}
+.home-burger:hover{transform:none!important;box-shadow:none!important}
+.home-burger i{display:block;height:2px;background:var(--navy);border-radius:2px;transition:transform .2s,opacity .2s}
+.home-burger[aria-expanded=true] i:nth-child(1){transform:translateY(7px) rotate(45deg)}.home-burger[aria-expanded=true] i:nth-child(2){opacity:0}.home-burger[aria-expanded=true] i:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+.home-styles{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px}
+.home-style{display:flex;flex-direction:column;padding:0;text-align:left;background:#fff;border:1px solid #dce2ea;border-radius:16px;overflow:hidden;color:var(--ink);font-weight:400;box-shadow:0 10px 26px #19263b0b;transition:transform .2s,box-shadow .2s,border-color .2s}
+.home-style:hover{transform:translateY(-4px);box-shadow:0 18px 34px #19263b1a}
+.home-style:focus-visible{outline:3px solid #ff7a0080;outline-offset:3px}
+.home-style.is-active{border-color:var(--orange);box-shadow:0 0 0 3px #ff7a0033,0 18px 34px #ff7a001a}
+.home-style-art{display:block;aspect-ratio:8/5;background:#f1eee8;overflow:hidden}
+.home-style-art img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .35s}
+.home-style:hover .home-style-art img{transform:scale(1.04)}
+.home-style-copy{display:grid;gap:4px;padding:14px 14px 16px}
+.home-style-copy small{display:flex;align-items:center;gap:6px;font:700 10px 'DM Mono',monospace;letter-spacing:1.4px;color:#a56533}
+.home-style-copy small svg{width:22px;height:22px;color:var(--navy)}
+.home-style-copy b{font:800 17px/1.2 Montserrat,sans-serif;letter-spacing:-.4px;color:var(--navy)}
+.home-style-copy span{font-size:13px;line-height:1.45;color:var(--muted)}
+.how{border-top:0}
+.how>div{background:#fff;border:1px solid #e3e7ee;border-radius:18px;padding:24px}
+.how h3{margin:12px 0 8px;color:var(--navy)}
+.home-pricing{max-width:1184px;margin:0 auto 80px;padding:0 28px}
+.home-price-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:stretch}
+.home-price-grid article{background:#fff;border:1px solid #dce2ea;border-radius:20px;padding:28px;display:flex;flex-direction:column;gap:6px;box-shadow:0 12px 30px #19263b0b}
+.home-price-grid small{font:700 11px 'DM Mono',monospace;letter-spacing:2px;color:#d75f00}
+.home-price-grid b{font:800 40px/1.1 Montserrat,sans-serif;letter-spacing:-1.5px;color:var(--navy)}
+.home-price-grid p{color:var(--muted);margin:0 0 6px;line-height:1.5}
+.home-price-grid ul{list-style:none;padding:0;margin:8px 0 0;display:grid;gap:8px;font-size:14px}
+.home-price-grid li:before{content:"✓";color:var(--orange);font-weight:800;margin-right:8px}
+.home-price-grid .is-featured{background:var(--navy);border-color:var(--navy);color:#fff}
+.home-price-grid .is-featured b{color:#ffb259}.home-price-grid .is-featured p{color:#c4ccd8}.home-price-grid .is-featured small{color:#ffb259}
+.home-price-grid a{margin-top:auto;align-self:flex-start;transform:translateY(12px);padding:13px 18px;border-radius:10px;background:var(--orange);color:#151515;font-weight:800;text-decoration:none}
+footer a{color:inherit}
+@media(max-width:1100px){.home-styles{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:900px){.home-styles{grid-template-columns:repeat(2,minmax(0,1fr))}.home-price-grid{grid-template-columns:1fr}}
+@media(max-width:650px){
+ .home-header nav{display:none;position:absolute;top:100%;left:0;right:0;flex-direction:column;gap:0;background:#fff;border-bottom:1px solid #dbe0e8;box-shadow:0 18px 30px #19263b1f;padding:8px 18px 14px}
+ .home-header nav.is-open{display:flex}
+ .home-header nav a{padding:14px 2px;border-bottom:1px solid #eef1f5;font-size:16px}
+ .home-burger{display:flex}.home-header .signin{display:none}.home-start{padding:11px 14px}
+ .home-styles{gap:10px}.home-style-copy{padding:10px 10px 12px}.home-style-copy b{font-size:15px}.home-style-copy span{font-size:12px}
+ .home-pricing{padding:0 18px}.how>div{padding:18px}
+}
+@media(prefers-reduced-motion:reduce){.home-style,.home-style-art img,.home-burger i{transition:none}}

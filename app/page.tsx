@@ -1,22 +1,32 @@
-"use client";
-
-import { useState } from "react";
-import Image from "next/image";
-import VantaNetBackground from "../components/VantaNetBackground";
+import {Hero, SiteHeader, StyleShowcase, type Sample} from "../components/HomeExperience";
+import {renderLogo} from "../lib/logo";
+import {localConcept} from "../lib/vector-engine";
+import {logoStyles} from "../lib/styles";
 
 const siteUrl = "https://logo.harshapex.com.lk";
-const concepts = [
-  { name: "Minimalist Mark", desc: "A precise geometric symbol that works at any size.", brand: "NORTHLINE", image: "minimal.svg", alt: "Northline geometric logo on stationery" },
-  { name: "Brand Identity Concepts", desc: "One identity explored across color, type and applications.", brand: "NEXORA", image: "identity.svg", alt: "Nexora brand identity applications" },
-  { name: "Premium Luxury Identity", desc: "Quiet, considered detail for a more refined presence.", brand: "MAISON VELA", image: "luxury.svg", alt: "Maison Vela luxury monogram stationery" },
-  { name: "Wordmark-Only Logo", desc: "Expressive lettering that makes the name the centerpiece.", brand: "nouvelle", image: "wordmark.svg", alt: "Nouvelle editorial wordmark packaging" },
-  { name: "Symbol + Wordmark System", desc: "A flexible lockup built for every brand touchpoint.", brand: "VALERIUS", image: "system.svg", alt: "Valerius logo system applications" },
-  { name: "Concept-Driven Logo", desc: "A visual idea drawn from your brand story.", brand: "TERRA FORM", image: "concept.svg", alt: "Terra Form landscape-inspired logo concept" },
-  { name: "Complete Brand Brief Builder", desc: "The strategy behind the mark, from audience to palette.", brand: "CEDAR & CO.", image: "brief.svg", alt: "Cedar and Co brand strategy board" },
-];
+
+// Fictional brands, rendered at build time by the same engine customers use.
+const sampleBriefs: Record<string, [string, string, string, string[]]> = {
+  minimalist: ["Northline", "Software studio", "Technology", []],
+  luxury: ["Maison Vela", "Boutique stays", "Hospitality", ["#15161B", "#C9A45C", "#FBF7EE"]],
+  modern: ["Kinetic", "Mobility labs", "Technology", ["#123B5D", "#2E9CCA", "#F4F8FA"]],
+  typography: ["nouvelle", "Editorial studio", "Creative agency", ["#1A1A1A", "#E1573A", "#FFF8F0"]],
+  monogram: ["Ashford Rowe", "Legal counsel", "Finance & consulting", ["#1E2B4A", "#B08D57", "#F7F4EE"]],
+  abstract: ["Terra Form", "Landscape design", "Agriculture & organic", []],
+  geometric: ["Valerius", "Architecture", "Real estate", ["#222831", "#E07A3F", "#F5F2EC"]],
+  mascot: ["Kiri Café", "Since 2024", "Food, café & restaurant", ["#5B3A29", "#F2A93B", "#FFF8EE"]],
+  "3d": ["Blockwise", "Build smarter", "Construction", ["#2D4B8E", "#F4B740", "#F5F7FB"]],
+  emblem: ["Cedar & Co.", "Organic pantry", "Agriculture & organic", ["#1F5A45", "#C2A15E", "#F4F1E8"]],
+};
+const samples: Sample[] = logoStyles.map(style => {
+  const [brand, tagline, industry, colors] = sampleBriefs[style.id];
+  const {spec} = localConcept({brand, tagline, industry, style: style.id, colors, details: ""}, "home");
+  return {id: style.id, brand, svg: renderLogo(brand, spec, tagline)};
+});
 
 const faqs = [
-  { question: "Is LOGOVA free to use?", answer: "Yes. Your first completed logo is free as a guest. After that, Rs. 300 unlocks five additional logo concepts." },
+  { question: "Is LOGOVA free to use?", answer: "Yes. Your first logo is free without signing up. Continue with Google for one more free logo. After that, LKR 300 unlocks five additional logo generations, paid via WhatsApp and verified by our team." },
+  { question: "Which logo styles can I choose?", answer: "Minimalist, Luxury, Modern, Typography, Monogram, Abstract, Geometric, Mascot, 3D-inspired and Emblem. You can also add a tagline, choose brand colours and describe your audience." },
   { question: "Can I edit and download my logo?", answer: "Yes. LOGOVA creates vector-based logo artwork that can be refined in the logo editor and downloaded as genuine SVG or PNG artwork." },
   { question: "What information should I provide for a better logo?", answer: "Add your brand name, industry, audience, personality, preferred colors and meaningful symbols. A clear brand brief helps produce a more relevant creative direction." },
   { question: "Who created LOGOVA?", answer: "LOGOVA is designed and developed by Harsh Apex Digital Solutions in Galle, Sri Lanka, for businesses that need an accessible professional brand identity workflow." },
@@ -55,10 +65,10 @@ const structuredData = {
       browserRequirements: "Requires JavaScript and a modern web browser",
       description: "Create, edit, save and export professional vector logo concepts from a structured brand brief.",
       creator: { "@id": `${siteUrl}/#organization` },
-      featureList: ["AI-assisted brand analysis", "Seven logo directions", "Editable vector logos", "SVG and PNG export", "Brand project storage"],
+      featureList: ["AI-assisted brand analysis", "Ten logo styles", "Editable vector logos", "SVG and PNG export", "Brand project storage"],
       offers: [
-        { "@type": "Offer", name: "First completed logo concept", price: "0", priceCurrency: "LKR" },
-        { "@type": "Offer", name: "Five completed logo concepts", price: "300", priceCurrency: "LKR" },
+        { "@type": "Offer", name: "First logo (guest) and one more with Google sign-in", price: "0", priceCurrency: "LKR" },
+        { "@type": "Offer", name: "Five additional logo generations", price: "300", priceCurrency: "LKR" },
       ],
     },
     {
@@ -83,57 +93,34 @@ const structuredData = {
 };
 
 export default function Home() {
-  const [brand, setBrand] = useState("");
-  const [industry, setIndustry] = useState("");
-  const [chosen, setChosen] = useState(0);
-
-  function start() {
-    window.location.href = `/studio?brand=${encodeURIComponent(brand)}&industry=${encodeURIComponent(industry)}&style=${chosen}`;
-  }
-
   return (
     <main>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData).replace(/</g, "\\u003c") }} />
-      <header>
-        <div className="logo" aria-label="LOGOVA AI Logo Builder"><span>✦</span> LOGO<span>VA</span><small>AI LOGO BUILDER</small></div>
-        <nav aria-label="Main navigation"><a href="#styles">Logo styles</a><a href="#how">How it works</a><a href="#pricing">Pricing</a><a href="#faq">FAQ</a><a href="/payments">My account</a></nav>
-        <a className="signin" href="/payments">Sign in</a>
-      </header>
+      <SiteHeader />
+      <Hero />
+      <StyleShowcase samples={samples} />
 
-      <section className="hero">
-        <VantaNetBackground />
-        <div className="copy">
-          <p className="eyebrow">BUILT BY HARSH APEX DIGITAL SOLUTIONS</p>
-          <h1>Professional logo design<br/>that <em>fits your brand.</em></h1>
-          <p className="intro">Create an editable AI-assisted logo and complete brand direction for your business. Explore seven professional design approaches, choose the right style and refine it in the vector studio.</p>
-          <div className="pill"><i/> Your first completed logo is free <b>· 5 more for Rs. 300</b></div>
-          <div className="brief" id="create">
-            <label>Brand name<input value={brand} onChange={(event) => setBrand(event.target.value)} placeholder="Your brand name"/></label>
-            <label>Industry<input value={industry} onChange={(event) => setIndustry(event.target.value)} placeholder="Fashion, hospitality, technology…"/></label>
-            <button onClick={start}>Start with selected style <span>↗</span></button>
-          </div>
-          <p className="trust">Choose a direction below · Preview examples are fictional brands</p>
+      <section className="how" id="how" aria-labelledby="how-title">
+        <h2 id="how-title" className="home-sr">How LOGOVA works</h2>
+        <div><small>01 — BRIEF</small><h3>Describe your brand</h3><p>Name, tagline, industry, colours and the personality you want people to feel.</p></div>
+        <div><small>02 — DESIGN</small><h3>Generate and refine</h3><p>Pick one of ten styles. Regenerate for a fresh idea or ask for a refinement in plain words.</p></div>
+        <div><small>03 — OWN IT</small><h3>Edit and download</h3><p>Fine-tune layers in the vector editor, then export SVG, PNG or transparent PNG.</p></div>
+      </section>
+
+      <section className="home-pricing" id="pricing" aria-labelledby="pricing-title">
+        <div className="section-heading"><p className="eyebrow">SIMPLE, FAIR PRICING</p><h2 id="pricing-title">Start free. <em>Pay only for more.</em></h2></div>
+        <div className="home-price-grid">
+          <article><small>GUEST</small><b>Free</b><p>Your first logo, no sign-up needed.</p><ul><li>1 logo generation</li><li>SVG &amp; PNG downloads</li><li>Vector editor</li></ul></article>
+          <article><small>GOOGLE ACCOUNT</small><b>Free</b><p>Save your work and get one more logo.</p><ul><li>2 free logos in total</li><li>Saved history &amp; workspace</li><li>Brand kit starter</li></ul></article>
+          <article className="is-featured"><small>LOGO PACK</small><b>LKR 300</b><p>Five more generations whenever you need them.</p><ul><li>5 logo generations</li><li>Pay easily via WhatsApp</li><li>Credits never expire</li></ul><a href="/studio">Start designing ↗</a></article>
         </div>
-        <div className="character" aria-hidden="true"><div className="orb orbit-one"/><div className="orb orbit-two"/><div className="designer-photo"><Image src="/real-designer.webp" alt="" fill priority sizes="(max-width: 650px) 90vw, 44vw"/></div><div className="spark one">✦</div><div className="spark two">✧</div></div>
-      </section>
-
-      <section className="style-section" id="styles" aria-labelledby="styles-title">
-        <div className="section-heading"><p className="eyebrow">SEVEN WAYS TO MAKE YOUR MARK</p><h2 id="styles-title">Find your <em>logo direction.</em></h2><p>Compare realistic brand applications, then choose a professional direction for your logo.</p></div>
-        <div className="style-grid">{concepts.map((concept, index) => <button type="button" className={chosen === index ? "style-card active" : "style-card"} aria-pressed={chosen === index} onClick={() => setChosen(index)} key={concept.name}><div className="style-art"><Image src={`/style-previews/${concept.image}`} alt={concept.alt} fill sizes="(max-width: 650px) 90vw, (max-width: 900px) 44vw, 30vw"/></div><div className="style-copy"><small>0{index + 1} / {concept.brand}</small><b>{concept.name}</b><p>{concept.desc}</p><i>{chosen === index ? "Selected ✓" : "Choose direction →"}</i></div></button>)}</div>
-        <div className="style-continue"><p>Selected: <strong>{concepts[chosen].name}</strong></p><button onClick={start}>Create with this direction ↗</button></div>
-      </section>
-
-      <section className="how" id="how" aria-label="How LOGOVA works">
-        <div><small>01 — EXPLORE</small><h3>Browse visual directions</h3><p>Compare minimalist, luxury, wordmark and concept-led logo systems before committing.</p></div>
-        <div><small>02 — PERSONALISE</small><h3>Build your brand brief</h3><p>Use your business, audience and personality to guide a more relevant result.</p></div>
-        <div id="pricing"><small>03 — CREATE</small><h3>First logo free</h3><p>Generate, edit and save your first concept free. Then unlock five more concepts for Rs. 300.</p></div>
       </section>
 
       <section className="seo-intro" aria-labelledby="why-logova">
         <p className="eyebrow">LOGO DESIGN FOR REAL BUSINESSES</p>
         <h2 id="why-logova">An AI logo maker with a professional brand workflow.</h2>
         <p>LOGOVA combines brand strategy, creative direction and editable vector artwork. It is built for startups, small businesses, hotels, villas, shops, creators and digital brands in Sri Lanka and worldwide.</p>
-        <div><span>Editable SVG artwork</span><span>PNG exports</span><span>Seven creative directions</span><span>Secure project storage</span></div>
+        <div><span>Editable SVG artwork</span><span>PNG &amp; transparent PNG</span><span>Ten logo styles</span><span>Secure project storage</span></div>
       </section>
 
       <section className="faq-section" id="faq" aria-labelledby="faq-title">
@@ -141,7 +128,7 @@ export default function Home() {
         <div className="faq-grid">{faqs.map((item) => <details key={item.question}><summary>{item.question}</summary><p>{item.answer}</p></details>)}</div>
       </section>
 
-      <footer>© 2026 Harsh Apex Digital Solutions <span>·</span> Galle, Sri Lanka <span>·</span> Made for original brands</footer>
+      <footer>© 2026 Harsh Apex Digital Solutions <span>·</span> Galle, Sri Lanka <span>·</span> WhatsApp <a href="https://wa.me/94770663154">+94 77 066 3154</a></footer>
     </main>
   );
 }

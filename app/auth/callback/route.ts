@@ -9,7 +9,9 @@ export async function GET(request: Request) {
   const code = url.searchParams.get("code");
   const error = url.searchParams.get("error_description") || url.searchParams.get("error");
   const canonicalOrigin = process.env.NEXT_PUBLIC_SITE_URL || "https://logo.harshapex.com.lk";
-  const destination = new URL("/payments", url.hostname === "localhost" ? url.origin : canonicalOrigin);
+  // Local and Vercel preview deployments keep their own origin: the PKCE verifier is stored there.
+  const sameOrigin = url.hostname === "localhost" || url.hostname === "127.0.0.1" || url.hostname.endsWith(".vercel.app");
+  const destination = new URL("/payments", sameOrigin ? url.origin : canonicalOrigin);
   if (code) destination.searchParams.set("code", code);
   if (error) destination.searchParams.set("oauth_error", error);
   return NextResponse.redirect(destination);
