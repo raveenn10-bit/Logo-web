@@ -33,12 +33,48 @@ function paletteFor(brief: Brief) {
   return ["#17243A","#E77A27","#F7F2E9"];
 }
 
+function sectorMark(brief: Brief, primary: string, accent: string): LogoSpec["paths"] | null {
+  const subject=(brief.industry+" "+brief.details).toLowerCase();
+  const line=(d:string,stroke=primary,width=10)=>({d,fill:"none",stroke,strokeWidth:width});
+  const solid=(d:string,fill=primary)=>({d,fill,stroke:"none",strokeWidth:0});
+  if (/villa|hotel|resort|stay|architecture|real estate/.test(subject)) return [
+    line("M 279 213 L 400 91 L 521 213",primary,13),
+    line("M 308 208 V 293 H 492 V 208",primary,11),
+    line("M 370 293 V 223 Q 370 193 400 193 Q 430 193 430 223 V 293",accent,11),
+    line("M 280 313 H 520",accent,5)
+  ];
+  if (/fashion|apparel|clothing|couture|tailor|boutique/.test(subject)) return [
+    line("M 326 278 C 366 239 376 166 400 101 C 424 166 434 239 474 278",primary,11),
+    line("M 326 278 C 370 258 430 258 474 278",primary,8),
+    line("M 342 248 Q 400 215 458 248",accent,6),
+    solid("M 389 95 Q 400 70 411 95 L 400 121 Z",accent)
+  ];
+  if (/tech|digital|software|circuit|electronics|ai|computer/.test(subject)) return [
+    line("M 338 95 V 223 Q 338 255 370 255 H 430 Q 462 255 462 223 V 95",primary,11),
+    line("M 370 95 V 193 Q 370 222 400 222 Q 430 222 430 193 V 95",accent,9),
+    line("M 400 255 V 297 M 308 194 H 338 M 462 194 H 492",primary,7),
+    solid("M 326 84 H 350 V 108 H 326 Z M 418 84 H 442 V 108 H 418 Z M 450 84 H 474 V 108 H 450 Z M 388 288 H 412 V 312 H 388 Z",accent)
+  ];
+  if (/coffee|cafe|food|restaurant|bakery|roast/.test(subject)) return [
+    line("M 326 192 C 326 265 367 297 413 297 C 459 297 489 262 489 204",primary,10),
+    line("M 489 209 C 545 192 535 260 486 260",accent,9),
+    line("M 360 160 C 341 138 372 125 359 97 M 404 160 C 385 138 416 125 403 97 M 448 160 C 429 138 460 125 447 97",primary,6),
+    line("M 314 312 H 498",accent,6)
+  ];
+  if (/eco|nature|plant|farm|garden|wellness|organic/.test(subject)) return [
+    solid("M 402 294 C 294 251 302 151 394 106 C 486 63 520 102 500 181 C 483 247 445 280 402 294 Z",primary),
+    line("M 354 245 C 390 204 429 167 477 130",accent,9),
+    line("M 389 204 L 367 156 M 420 176 L 468 197",accent,6)
+  ];
+  return null;
+}
+
 /** A deterministic, editable vector direction used only when the AI provider is slow or unavailable. */
 function localConcept(brief: Brief): {spec:LogoSpec;model:string;tokens:number} {
   const [primary,accent,canvas]=paletteFor(brief);
   const common={fill:"none",stroke:primary,strokeWidth:12};
   const direction=styles[brief.style];
-  const paths:LogoSpec["paths"] = brief.style===0 ? [
+  const defaultPaths:LogoSpec["paths"] = brief.style===0 ? [
     {d:"M 400 78 C 468 78 522 132 522 200 C 522 268 468 322 400 322 C 332 322 278 268 278 200 C 278 132 332 78 400 78 Z",...common},
     {d:"M 336 200 L 400 136 L 464 200 L 400 264 Z",fill:accent,stroke:"none",strokeWidth:0}
   ] : brief.style===1 ? [
@@ -57,6 +93,7 @@ function localConcept(brief: Brief): {spec:LogoSpec;model:string;tokens:number} 
     {d:"M 310 118 C 345 86 389 78 430 94 C 471 110 498 148 498 191 C 498 258 447 310 380 310 C 326 310 284 276 272 228 C 314 251 356 247 385 217 C 416 185 411 143 390 112 Z",fill:primary,stroke:"none",strokeWidth:0},
     {d:"M 316 201 C 346 170 375 156 423 158",fill:"none",stroke:accent,strokeWidth:12}
   ];
+  const paths=brief.style===3?[]:(brief.style===1||brief.style===5?sectorMark(brief,primary,accent):null)||defaultPaths;
   const layout:LogoSpec["layout"]=brief.style===3?"wordmark":brief.style===4?"horizontal":"stacked";
   return {model:"local-vector-fallback",tokens:0,spec:{
     name:direction,
